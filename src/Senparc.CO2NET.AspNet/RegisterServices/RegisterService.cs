@@ -1,4 +1,4 @@
-﻿#if NETSTANDARD2_0 || NETSTANDARD2_1
+﻿#if NETSTANDARD2_0 || NETCOREAPP3_1
 using Microsoft.AspNetCore.Hosting;
 using Senparc.CO2NET.RegisterServices;
 using System;
@@ -19,9 +19,9 @@ namespace Senparc.CO2NET.AspNet.RegisterServices
         /// <returns></returns>
         public static Senparc.CO2NET.RegisterServices.RegisterService Start(
 #if NETSTANDARD2_0
-            Microsoft.Extensions.Hosting.IHostEnvironment/*IHostingEnvironment*/ env, 
+            IHostingEnvironment env, 
 #else
-            Microsoft.Extensions.Hosting.IHostEnvironment/*IWebHostEnvironment*/ env,
+            IWebHostEnvironment env,
 #endif
             SenparcSetting senparcSetting)
         {

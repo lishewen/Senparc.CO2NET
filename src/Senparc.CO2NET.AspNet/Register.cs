@@ -1,4 +1,4 @@
-﻿#if NETSTANDARD2_0 || NETSTANDARD2_1
+﻿#if NETSTANDARD2_0 || NETCOREAPP3_1
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Builder;
 #endif
@@ -16,7 +16,7 @@ namespace Senparc.CO2NET.AspNet
     /// </summary>
     public static class Register
     {
-#if NETSTANDARD2_0 || NETSTANDARD2_1
+#if NETSTANDARD2_0 || NETCOREAPP3_1
 
         /// <summary>
         /// 开始 Senparc.CO2NET 初始化参数流程（ASP.NET Core)
@@ -32,9 +32,9 @@ namespace Senparc.CO2NET.AspNet
         /// <returns></returns>
         public static IRegisterService UseSenparcGlobal(this IApplicationBuilder registerService,
 #if NETSTANDARD2_0
-            Microsoft.Extensions.Hosting.IHostEnvironment/*IHostingEnvironment*/ env,
+            IHostingEnvironment env,
 #else
-            Microsoft.Extensions.Hosting.IHostEnvironment/*IWebHostEnvironment*/ env,
+            IWebHostEnvironment env,
 #endif
             SenparcSetting senparcSetting,
             Action<RegisterService> registerConfigure,

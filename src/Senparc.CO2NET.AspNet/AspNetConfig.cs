@@ -1,4 +1,4 @@
-﻿#if NETSTANDARD2_0 || NETSTANDARD2_1
+﻿#if NETSTANDARD2_0 || NETCOREAPP3_1
 using Microsoft.AspNetCore.Hosting;
 #endif 
 using System;
@@ -14,12 +14,12 @@ namespace Senparc.CO2NET
         /// <summary>
         /// Web hosting environment
         /// </summary>
-        public static Microsoft.Extensions.Hosting.IHostEnvironment HostingEnvironment { get; set; }
-#elif NETSTANDARD2_1
+        public static IHostingEnvironment HostingEnvironment { get; set; }
+#elif NETCOREAPP3_1
         /// <summary>
         /// Web hosting environment
         /// </summary>
-        public static Microsoft.Extensions.Hosting.IHostEnvironment/*IWebHostEnvironment*/ HostingEnvironment { get; set; }
+        public static IWebHostEnvironment HostingEnvironment { get; set; }
 #endif
     }
 }

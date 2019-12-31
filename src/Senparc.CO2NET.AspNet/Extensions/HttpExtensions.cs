@@ -37,7 +37,7 @@ Detail: https://github.com/Senparc/Senparc.CO2NET/blob/master/LICENSE
 
 ----------------------------------------------------------------*/
 
-#if NETSTANDARD2_0 || NETSTANDARD2_1
+#if NETSTANDARD2_0 || NETCOREAPP3_1
 
 using Microsoft.AspNetCore.Http.Features;
 using System;
