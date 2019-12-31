@@ -19,7 +19,7 @@ Detail: https://github.com/Senparc/Senparc.CO2NET/blob/master/LICENSE
 #endregion Apache License Version 2.0
 
 /*----------------------------------------------------------------
-    Copyright (C) 2018 Senparc
+    Copyright (C) 2019 Senparc
 
     文件名：RequestUtility.Get.cs
     文件功能描述：获取请求结果（Get）
@@ -50,7 +50,7 @@ using System.Web;
 using System.Net.Http;
 using System.Net.Http.Headers;
 #endif
-#if NETSTANDARD2_0
+#if NETSTANDARD2_0 || (NETSTANDARD2_1 || NETCOREAPP3_0)
 using Microsoft.AspNetCore.Http;
 using Senparc.CO2NET.WebProxy;
 #endif
@@ -92,7 +92,7 @@ namespace Senparc.CO2NET.HttpUtility
         }
 #endif
 
-#if NETSTANDARD2_0
+#if NETSTANDARD2_0 || (NETSTANDARD2_1 || NETCOREAPP3_0)
         /// <summary>
         /// .NET Core 版本的HttpWebRequest参数设置
         /// </summary>
@@ -255,7 +255,7 @@ namespace Senparc.CO2NET.HttpUtility
             WebClient wc = new WebClient();
             wc.Proxy = _webproxy;
             wc.Encoding = encoding ?? Encoding.UTF8;
-            return await wc.DownloadStringTaskAsync(url);
+            return await wc.DownloadStringTaskAsync(url).ConfigureAwait(false);
 #else
             var handler = new HttpClientHandler
             {
@@ -264,7 +264,7 @@ namespace Senparc.CO2NET.HttpUtility
             };
 
             HttpClient httpClient = SenparcDI.GetRequiredService<SenparcHttpClient>().Client;
-            return await httpClient.GetStringAsync(url);
+            return await httpClient.GetStringAsync(url).ConfigureAwait(false);
 #endif
 
         }
@@ -285,7 +285,7 @@ namespace Senparc.CO2NET.HttpUtility
 #if NET35 || NET40 || NET45
             HttpWebRequest request = HttpGet_Common_Net45(url, cookieContainer, encoding, cer, refererUrl, useAjax, timeOut);
 
-            HttpWebResponse response = (HttpWebResponse)(await request.GetResponseAsync());
+            HttpWebResponse response = (HttpWebResponse)(await request.GetResponseAsync().ConfigureAwait(false));
 
             if (cookieContainer != null)
             {
@@ -296,18 +296,18 @@ namespace Senparc.CO2NET.HttpUtility
             {
                 using (StreamReader myStreamReader = new StreamReader(responseStream, encoding ?? Encoding.GetEncoding("utf-8")))
                 {
-                    string retString = await myStreamReader.ReadToEndAsync();
+                    string retString = await myStreamReader.ReadToEndAsync().ConfigureAwait(false);
                     return retString;
                 }
             }
 #else
             var httpClient = HttpGet_Common_NetCore(url, cookieContainer, encoding, cer, refererUrl, useAjax, timeOut);
 
-            var response = await httpClient.GetAsync(url);//获取响应信息
+            var response = await httpClient.GetAsync(url).ConfigureAwait(false);//获取响应信息
 
             HttpClientHelper.SetResponseCookieContainer(cookieContainer, response);//设置 Cookie
 
-            var retString = await response.Content.ReadAsStringAsync();
+            var retString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
 
             return retString;
 #endif

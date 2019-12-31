@@ -19,7 +19,7 @@ Detail: https://github.com/Senparc/Senparc.CO2NET/blob/master/LICENSE
 #endregion Apache License Version 2.0
 
 /*----------------------------------------------------------------
-    Copyright (C) 2018 Senparc
+    Copyright (C) 2019 Senparc
     
     文件名：FileHelper.cs
     文件功能描述：处理文件
@@ -41,6 +41,9 @@ Detail: https://github.com/Senparc/Senparc.CO2NET/blob/master/LICENSE
 
     修改标识：Senparc - 20180601
     修改描述：v0.1.0 移植 FileHelper
+
+    修改标识：Senparc - 20190811
+    修改描述：v0.8.6 添加 FileHelper.FileInUse() 方法，用于判断文件是否正在被占用
 
 ----------------------------------------------------------------*/
 
@@ -85,6 +88,31 @@ namespace Senparc.CO2NET.Helpers
 #else
                 fs.Flush(true);
 #endif
+            }
+        }
+
+        /// <summary>
+        /// 判断文件是否正在被使用
+        /// </summary>
+        /// <param name="filePath">文件路径</param>
+        /// <returns></returns>
+        public static bool FileInUse(string filePath)
+        {
+            try
+            {
+                if (!System.IO.File.Exists(filePath)) // The path might also be invalid.
+                {
+                    return false;
+                }
+
+                using (System.IO.FileStream stream = new System.IO.FileStream(filePath, System.IO.FileMode.Open))
+                {
+                    return false;
+                }
+            }
+            catch
+            {
+                return true;
             }
         }
     }

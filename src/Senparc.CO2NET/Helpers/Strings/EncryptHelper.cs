@@ -19,7 +19,7 @@ Detail: https://github.com/Senparc/Senparc.CO2NET/blob/master/LICENSE
 #endregion Apache License Version 2.0
 
 /*----------------------------------------------------------------
-    Copyright (C) 2018 Senparc
+    Copyright (C) 2019 Senparc
  
     创建标识：Senparc - 20160808
     创建描述：安全帮助类，提供SHA-1、AES算法等
@@ -210,6 +210,31 @@ namespace Senparc.CO2NET.Helpers
                 //                inputBye = Encoding.GetEncoding(936).GetBytes(encypStr);
                 //#endif
             }
+        }
+
+        /// <summary>
+        /// 获取MD5签名结果
+        /// </summary>
+        /// <param name="stream">Stream</param>
+        /// <param name="encoding">默认为：utf8</param>
+        /// <param name="toUpper">是否返回大写结果，true：大写，false：小写</param>
+        /// <returns></returns>
+        public static string GetMD5(Stream stream, bool toUpper = true, Encoding encoding = null)
+        {
+            encoding = encoding ?? Encoding.UTF8;
+            stream.Position = 0;
+
+            System.Security.Cryptography.MD5 md5 = new System.Security.Cryptography.MD5CryptoServiceProvider();
+            byte[] ret = md5.ComputeHash(stream);
+
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < ret.Length; i++)
+            {
+                sb.Append(ret[i].ToString(toUpper ? "X2" : "x2"));
+            }
+
+            string md5str = sb.ToString();
+            return md5str;
         }
 
         /// <summary>

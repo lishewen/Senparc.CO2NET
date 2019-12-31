@@ -1,7 +1,6 @@
 <img src="https://sdk.weixin.senparc.com/images/senparc-logo-500.jpg" /> 
 
 # Senparc.CO2NET
-
 [![Build status](https://mysenparc.visualstudio.com/Senparc%20SDK/_apis/build/status/CO2NET/Senparc.CO2NET%20-ASP.NET%20Core-CI-clone)](https://mysenparc.visualstudio.com/Senparc%20SDK/_build/latest?definitionId=11)
 [![Build status](https://ci.appveyor.com/api/projects/status/uqhyn9i2x5r300dq/branch/master?svg=true)](https://ci.appveyor.com/project/JeffreySu/senparc-co2net/branch/master)
 [![NuGet](https://img.shields.io/nuget/dt/Senparc.CO2NET.svg)](https://www.nuget.org/packages/Senparc.CO2NET)
@@ -14,6 +13,8 @@
 | Memcached 基础库 | Senparc.CO2NET.Cache.Memcached   | [![Senparc.CO2NET.Cache.Memcached][4.1]][4.2]    [![Senparc.CO2NET.Cache.Memcached][nuget-img-base-memcached]][nuget-url-base-memcached]  |  ![.NET 3.5][net35N]    ![.NET 4.0][net40N]   ![.NET 4.5][net45Y]    ![.NET Core 2.0][core20Y]
 
 ![.NET Core 2.0][core20Y] 同时支持 .NET Standard 2.0+ 及 .NET Core 2.2+
+
+> CO2NET 将逐步停止对 .NET Framework 4.0 及以下版本的支持。
 
 [1.1]: https://img.shields.io/nuget/v/Senparc.CO2NET.svg?style=flat
 [1.2]: https://www.nuget.org/packages/Senparc.CO2NET

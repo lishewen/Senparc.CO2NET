@@ -1,6 +1,6 @@
 ﻿
 /*----------------------------------------------------------------
-    Copyright (C) 2018 Senparc
+    Copyright (C) 2019 Senparc
 
     文件名：SenparcDI.cs
     文件功能描述：针对 .NET Core 的依赖注入扩展类
@@ -17,9 +17,12 @@
     修改标识：pengweiqhca - 20190118
     修改描述：v0.5.2 添加 SenparcDI.GetRequiredService() 方法，提供线程内独立 ServiceProvider 实例
 
+    修改标识：pengweiqhca - 201901527
+    修改描述：v0.8.2 添加 SenparcDI.ResetGlobalIServiceProvider(this IServiceCollection serviceCollection) 方法
+
 ----------------------------------------------------------------*/
 
-#if NETSTANDARD2_0
+#if NETSTANDARD2_0 || (NETSTANDARD2_1 || NETCOREAPP3_0)
 using System;
 using System.Threading;
 using Microsoft.Extensions.DependencyInjection;
@@ -57,7 +60,7 @@ namespace Senparc.CO2NET
         /// <summary>
         /// 全局 IServiceCollection 对象
         /// </summary>
-        public static IServiceProvider GlobalIServiceProvider { get; set; }
+        public static IServiceProvider GlobalIServiceProvider { get; private set; }
 
         /// <summary>
         /// 线程内的 单一 Scope 范围 ServiceScope
@@ -143,6 +146,25 @@ namespace Senparc.CO2NET
         public static T GetRequiredService<T>(bool useGlobalScope = true)
         {
             return GetIServiceProvider(useGlobalScope).GetRequiredService<T>();
+        }
+
+        /// <summary>
+        /// 重置 GlobalIServiceProvider 对象，重新从 GlobalServiceCollection..BuildServiceProvider() 生成对象
+        /// </summary>
+        public static void ResetGlobalIServiceProvider()
+        {
+            GlobalIServiceProvider = null;
+        }
+
+        /// <summary>
+        /// 重置 GlobalIServiceProvider 对象，重新从 GlobalServiceCollection..BuildServiceProvider() 生成对象
+        /// </summary>
+        /// <param name="serviceCollection"></param>
+        /// <returns></returns>
+        public static IServiceCollection ResetGlobalIServiceProvider(this IServiceCollection serviceCollection)
+        {
+            ResetGlobalIServiceProvider();
+            return serviceCollection;
         }
 
         #region 过期方法

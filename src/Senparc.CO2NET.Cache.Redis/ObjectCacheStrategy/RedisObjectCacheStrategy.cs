@@ -19,7 +19,7 @@ Detail: https://github.com/Senparc/Senparc.CO2NET/blob/master/LICENSE
 #endregion Apache License Version 2.0
 
 /*----------------------------------------------------------------
-    Copyright (C) 2018 Senparc
+    Copyright (C) 2019 Senparc
 
     文件名：RedisObjectCacheStrategy.cs
     文件功能描述：Redis的Object类型容器缓存（Key为String类型）。
@@ -40,6 +40,9 @@ Detail: https://github.com/Senparc/Senparc.CO2NET/blob/master/LICENSE
 
     修改标识：Senparc - 20190418
     修改描述：v3.5.0.1 添加 GetAllByPrefixAsync() 方法
+
+    修改标识：Senparc - 20190914
+    修改描述：v3.5.4 fix bug：GetServer().Keys() 方法添加 database 索引值
 
  ----------------------------------------------------------------*/
 
@@ -162,7 +165,8 @@ namespace Senparc.CO2NET.Cache.Redis
             var keyPrefix = GetFinalKey("");//获取带Senparc:DefaultCache:前缀的Key（[DefaultCache]可配置）
             var dic = new Dictionary<string, object>();
 
-            var keys = GetServer().Keys(pattern: keyPrefix + "*");
+
+            var keys = GetServer().Keys(database: Client.GetDatabase().Database, pattern: keyPrefix + "*", pageSize: 99999);
             foreach (var redisKey in keys)
             {
                 dic[redisKey] = Get(redisKey, true);
@@ -170,11 +174,13 @@ namespace Senparc.CO2NET.Cache.Redis
             return dic;
         }
 
+        //TODO: 提供 GetAllKeys() 方法
+
 
         public override long GetCount()
         {
             var keyPattern = GetFinalKey("*");//获取带Senparc:DefaultCache:前缀的Key（[DefaultCache]         
-            var count = GetServer().Keys(pattern: keyPattern).Count();
+            var count = GetServer().Keys(database: Client.GetDatabase().Database, pattern: keyPattern, pageSize: 99999).Count();
             return count;
         }
 
@@ -230,7 +236,7 @@ namespace Senparc.CO2NET.Cache.Redis
         public override async Task<bool> CheckExistedAsync(string key, bool isFullKey = false)
         {
             var cacheKey = GetFinalKey(key, isFullKey);
-            return await _cache.KeyExistsAsync(cacheKey);
+            return await _cache.KeyExistsAsync(cacheKey).ConfigureAwait(false);
         }
 
         public override async Task<object> GetAsync(string key, bool isFullKey = false)
@@ -240,14 +246,14 @@ namespace Senparc.CO2NET.Cache.Redis
                 return null;
             }
 
-            if (!await CheckExistedAsync(key, isFullKey))
+            if (!await CheckExistedAsync(key, isFullKey).ConfigureAwait(false))
             {
                 return null;
             }
 
             var cacheKey = GetFinalKey(key, isFullKey);
 
-            var value = await _cache.StringGetAsync(cacheKey);
+            var value = await _cache.StringGetAsync(cacheKey).ConfigureAwait(false);
             if (value.HasValue)
             {
                 return value.ToString().DeserializeFromCache();
@@ -262,7 +268,7 @@ namespace Senparc.CO2NET.Cache.Redis
                 return default(T);
             }
 
-            if (!await CheckExistedAsync(key, isFullKey))
+            if (!await CheckExistedAsync(key, isFullKey).ConfigureAwait(false))
             {
                 return default(T);
                 //InsertToCache(key, new ContainerItemCollection());
@@ -270,7 +276,7 @@ namespace Senparc.CO2NET.Cache.Redis
 
             var cacheKey = GetFinalKey(key, isFullKey);
 
-            var value = await _cache.StringGetAsync(cacheKey);
+            var value = await _cache.StringGetAsync(cacheKey).ConfigureAwait(false);
             if (value.HasValue)
             {
                 return value.ToString().DeserializeFromCache<T>();
@@ -280,7 +286,7 @@ namespace Senparc.CO2NET.Cache.Redis
         }
 
         /// <summary>
-        /// 注意：此方法获取的object为直接储存在缓存中，序列化之后的Value
+        /// 注意：此方法获取的object为直接储存在缓存中，序列化之后的Value（最多 99999 条）
         /// </summary>
         /// <returns></returns>
         public override async Task<IDictionary<string, object>> GetAllAsync()
@@ -288,10 +294,10 @@ namespace Senparc.CO2NET.Cache.Redis
             var keyPrefix = GetFinalKey("");//获取带Senparc:DefaultCache:前缀的Key（[DefaultCache]可配置）
             var dic = new Dictionary<string, object>();
 
-            var keys = GetServer().Keys(pattern: keyPrefix + "*");
+            var keys = GetServer().Keys(database: Client.GetDatabase().Database, pattern: keyPrefix + "*", pageSize: 99999);
             foreach (var redisKey in keys)
             {
-                dic[redisKey] = await GetAsync(redisKey, true);
+                dic[redisKey] = await GetAsync(redisKey, true).ConfigureAwait(false);
             }
             return dic;
         }
@@ -312,7 +318,7 @@ namespace Senparc.CO2NET.Cache.Redis
             var cacheKey = GetFinalKey(key, isFullKey);
 
             var json = value.SerializeToCache();
-            await _cache.StringSetAsync(cacheKey, json, expiry);
+            await _cache.StringSetAsync(cacheKey, json, expiry).ConfigureAwait(false);
         }
 
         public override async Task RemoveFromCacheAsync(string key, bool isFullKey = false)
@@ -325,12 +331,12 @@ namespace Senparc.CO2NET.Cache.Redis
             var cacheKey = GetFinalKey(key, isFullKey);
 
             SenparcMessageQueue.OperateQueue();//延迟缓存立即生效
-            await _cache.KeyDeleteAsync(cacheKey);//删除键
+            await _cache.KeyDeleteAsync(cacheKey).ConfigureAwait(false);//删除键
         }
 
         public override async Task UpdateAsync(string key, object value, TimeSpan? expiry = null, bool isFullKey = false)
         {
-            await SetAsync(key, value, expiry, isFullKey);
+            await SetAsync(key, value, expiry, isFullKey).ConfigureAwait(false);
         }
 
 #endif
@@ -339,12 +345,12 @@ namespace Senparc.CO2NET.Cache.Redis
         #endregion
 
         /// <summary>
-        /// 根据 key 的前缀获取对象列表
+        /// 根据 key 的前缀获取对象列表（最多 99999 条）
         /// </summary>
         public IList<T> GetAllByPrefix<T>(string key)
         {
             var keyPattern = GetFinalKey("*");//获取带Senparc:DefaultCache:前缀的Key（[DefaultCache]         
-            var keys = GetServer().Keys(pattern: keyPattern);
+            var keys = GetServer().Keys(database: Client.GetDatabase().Database, pattern: keyPattern, pageSize: 99999);
             List<T> list = new List<T>();
             foreach (var fullKey in keys)
             {
@@ -360,16 +366,16 @@ namespace Senparc.CO2NET.Cache.Redis
 
 
         /// <summary>
-        /// 【异步方法】根据 key 的前缀获取对象列表
+        /// 【异步方法】根据 key 的前缀获取对象列表（最多 99999 条）
         /// </summary>
         public async Task<IList<T>> GetAllByPrefixAsync<T>(string key)
         {
             var keyPattern = GetFinalKey("*");//获取带Senparc:DefaultCache:前缀的Key（[DefaultCache]         
-            var keys = GetServer().Keys(pattern: keyPattern);
+            var keys = GetServer().Keys(database: Client.GetDatabase().Database, pattern: keyPattern, pageSize: 99999);
             List<T> list = new List<T>();
             foreach (var fullKey in keys)
             {
-                var obj = await GetAsync<T>(fullKey, true);
+                var obj = await GetAsync<T>(fullKey, true).ConfigureAwait(false);
                 if (obj != null)
                 {
                     list.Add(obj);

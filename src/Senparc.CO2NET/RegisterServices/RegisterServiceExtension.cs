@@ -19,7 +19,7 @@ Detail: https://github.com/Senparc/Senparc.CO2NET/blob/master/LICENSE
 #endregion Apache License Version 2.0
 
 /*----------------------------------------------------------------
-    Copyright (C) 2018 Senparc
+    Copyright (C) 2019 Senparc
 
     文件名：RegisterService.cs
     文件功能描述：Senparc.Weixin SDK 快捷注册流程
@@ -35,8 +35,11 @@ Detail: https://github.com/Senparc/Senparc.CO2NET/blob/master/LICENSE
     修改标识：Senparc - 20180704
     修改描述：v0.1.5 RegisterServiceExtension.AddSenparcGlobalServices() 方法可自动获取 SenparcSetting 全局设置
 
-    修改标识：Senparc - 201929
+    修改标识：Senparc - 20190429
     修改描述：v0.7.0 优化 HttpClient，重构 RequestUtility（包括 Post 和 Get），引入 HttpClientFactory 机制
+
+    修改标识：Senparc - 20190521
+    修改描述：v0.7.3 .NET Core 提供多证书注册功能
 
 ----------------------------------------------------------------*/
 
@@ -46,11 +49,17 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Senparc.CO2NET.HttpUtility;
+using System.Security.Cryptography.X509Certificates;
+using System.Net.Security;
+using System.IO;
 
-#if NETSTANDARD2_0
+#if NETSTANDARD2_0 || (NETSTANDARD2_1 || NETCOREAPP3_0)
 using System.Net.Http;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 #endif
 
 namespace Senparc.CO2NET.RegisterServices
@@ -60,7 +69,13 @@ namespace Senparc.CO2NET.RegisterServices
     /// </summary>
     public static class RegisterServiceExtension
     {
-#if NETSTANDARD2_0
+#if NETSTANDARD2_0 || (NETSTANDARD2_1 || NETCOREAPP3_0) 
+
+        /// <summary>
+        /// 是否已经进行过全局注册
+        /// </summary>
+        public static bool SenparcGlobalServicesRegistered { get; set; }
+
         /// <summary>
         /// 注册 IServiceCollection，并返回 RegisterService，开始注册流程（必须）
         /// </summary>
@@ -73,6 +88,7 @@ namespace Senparc.CO2NET.RegisterServices
             SenparcDI.GlobalServiceCollection = serviceCollection;
             serviceCollection.Configure<SenparcSetting>(configuration.GetSection("SenparcSetting"));
 
+            // .net core 3.0 HttpClient 文档参考：https://docs.microsoft.com/zh-cn/aspnet/core/fundamentals/http-requests?view=aspnetcore-3.0
             //配置 HttpClient，可使用 Head 自定义 Cookie
             serviceCollection.AddHttpClient<SenparcHttpClient>()
             //.ConfigureHttpMessageHandlerBuilder((c) =>
@@ -91,6 +107,76 @@ namespace Senparc.CO2NET.RegisterServices
   },
              */
 
+            SenparcGlobalServicesRegistered = true;
+
+            return serviceCollection;
+        }
+
+        /// <summary>
+        /// 注册 IServiceCollection，并返回 RegisterService，开始注册流程（必须）
+        /// </summary>
+        /// <param name="serviceCollection">IServiceCollection</param>
+        /// <param name="certName">证书名称，必须全局唯一，并且确保在全局 HttpClientFactory 内唯一</param>
+        /// <param name="certSecret">证书密码</param>
+        /// <param name="certPath">证书路径（物理路径）</param>
+        /// <param name="checkValidationResult">设置</param>
+        /// <returns></returns>
+        public static IServiceCollection AddSenparcHttpClientWithCertificate(this IServiceCollection serviceCollection,
+            string certName, string certSecret, string certPath, bool checkValidationResult = false)
+        {
+            //添加注册
+            if (!string.IsNullOrEmpty(certPath))
+            {
+                if (File.Exists(certPath))
+                {
+                    try
+                    {
+                        var cert = new X509Certificate2(certPath, certSecret, X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.MachineKeySet);
+                        return AddSenparcHttpClientWithCertificate(serviceCollection, certName, cert, checkValidationResult);
+                    }
+                    catch (Exception ex)
+                    {
+                        Senparc.CO2NET.Trace.SenparcTrace.SendCustomLog($"添加微信支付证书发生异常", $"certName:{certName},certPath:{certPath}");
+                        Senparc.CO2NET.Trace.SenparcTrace.BaseExceptionLog(ex);
+                        return serviceCollection;
+                    }
+                }
+                else
+                {
+                    Senparc.CO2NET.Trace.SenparcTrace.SendCustomLog($"已设置微信支付证书，但无法找到文件", $"certName:{certName},certPath:{certPath}");
+                    return serviceCollection;
+                }
+            }
+            return serviceCollection;
+        }
+
+        /// <summary>
+        /// 注册 IServiceCollection，并返回 RegisterService，开始注册流程（必须）
+        /// </summary>
+        /// <param name="serviceCollection">IServiceCollection</param>
+        /// <param name="certName">证书名称，必须全局唯一，并且确保在全局 HttpClientFactory 内唯一</param>
+        /// <param name="cert">证书对象，也可以是 X509Certificate2</param>
+        /// <param name="checkValidationResult">设置</param>
+        /// <returns></returns>
+        public static IServiceCollection AddSenparcHttpClientWithCertificate(this IServiceCollection serviceCollection,
+            string certName, X509Certificate cert, bool checkValidationResult = false)
+        {
+            serviceCollection.AddHttpClient<SenparcHttpClient>(certName)
+                         .ConfigurePrimaryHttpMessageHandler(() =>
+                         {
+                             var httpClientHandler = HttpClientHelper.GetHttpClientHandler(null, RequestUtility.SenparcHttpClientWebProxy, System.Net.DecompressionMethods.GZip);
+
+                             httpClientHandler.ClientCertificates.Add(cert);
+
+                             if (checkValidationResult)
+                             {
+                                 httpClientHandler.ServerCertificateCustomValidationCallback = new Func<HttpRequestMessage, X509Certificate2, X509Chain, SslPolicyErrors, bool>(RequestUtility.CheckValidationResult);
+                             }
+
+                             return httpClientHandler;
+                         });
+             
+            SenparcDI.ResetGlobalIServiceProvider();//重置 GlobalIServiceProvider
             return serviceCollection;
         }
 
