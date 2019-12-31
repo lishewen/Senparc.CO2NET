@@ -46,7 +46,7 @@ using System.Globalization;
 using System.IO;
 using System.Text.RegularExpressions;
 using System.Text;
-#if NET35 || NET40 || NET45
+#if NET45
 using System.Web.Script.Serialization;
 #else
 using Newtonsoft.Json;
@@ -91,7 +91,7 @@ namespace Senparc.CO2NET.Helpers
         public static T GetObject<T>(this string jsonString)
         {
             return (T)Newtonsoft.Json.JsonConvert.DeserializeObject(jsonString, typeof(T));
-            //#if NET35 || NET40 || NET45
+            //#if NET45
             //            JavaScriptSerializer jsSerializer = new JavaScriptSerializer();
             //            return jsSerializer.Deserialize<T>(jsonString);
             //#else
@@ -125,7 +125,7 @@ namespace Senparc.CO2NET.Helpers
         //                return null;
         //            }
 
-        //#if NETSTANDARD2_0 || (NETSTANDARD2_1 || NETCOREAPP3_0)
+        //#if NETSTANDARD2_0 || NETSTANDARD2_1
         //            ////二进制序列化方案
         //            //using (MemoryStream memoryStream = new MemoryStream())
         //            //{
@@ -170,7 +170,7 @@ namespace Senparc.CO2NET.Helpers
         //                return default(T);
         //            }
 
-        //#if NETSTANDARD2_0 || (NETSTANDARD2_1 || NETCOREAPP3_0)
+        //#if NETSTANDARD2_0 || NETSTANDARD2_1
         //            ////二进制序列化方案
         //            //using (MemoryStream memoryStream = new MemoryStream(stream))
         //            //{
