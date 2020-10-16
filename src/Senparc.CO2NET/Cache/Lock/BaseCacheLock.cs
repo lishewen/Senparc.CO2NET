@@ -19,7 +19,7 @@ Detail: https://github.com/Senparc/Senparc.CO2NET/blob/master/LICENSE
 #endregion Apache License Version 2.0
 
 /*----------------------------------------------------------------
-    Copyright (C) 2018 Senparc
+    Copyright (C) 2020 Senparc
 
     文件名：LocalCacheLock.cs
     文件功能描述：本地锁
@@ -171,11 +171,11 @@ namespace Senparc.CO2NET.Cache
         //{
         //    if (_retryCount != 0 && _retryDelay.Ticks != 0)
         //    {
-        //        LockSuccessful = await LockAsync(_resourceName, _retryCount, _retryDelay);
+        //        LockSuccessful = await LockAsync(_resourceName, _retryCount, _retryDelay).ConfigureAwait(false);
         //    }
         //    else
         //    {
-        //        LockSuccessful = await LockAsync(_resourceName);
+        //        LockSuccessful = await LockAsync(_resourceName).ConfigureAwait(false);
         //    }
         //    return this;
         //}

@@ -19,7 +19,7 @@ Detail: https://github.com/Senparc/Senparc.CO2NET/blob/master/LICENSE
 #endregion Apache License Version 2.0
 
 /*----------------------------------------------------------------
-    Copyright (C) 2018 Senparc
+    Copyright (C) 2020 Senparc
 
     文件名：RequestUtility.cs
     文件功能描述：获取请求结果
@@ -58,6 +58,15 @@ Detail: https://github.com/Senparc/Senparc.CO2NET/blob/master/LICENSE
     修改标识：Senparc - 20190429
     修改描述：v0.7.0 优化 HttpClient，重构 RequestUtility（包括 Post 和 Get），引入 HttpClientFactory 机制
 
+    修改标识：Senparc - 20190521
+    修改描述：v0.7.3 .NET Core 提供多证书注册功能
+
+    修改标识：Senparc - 20190521
+    修改描述：v0.8.4 HttpUtility.HttpPost_Common_NetCore 所调用的额 CreateFileContent 取消对 fileName 参数的 UrlEncode 编码
+
+    修改标识：Senparc - 20190928
+    修改描述：v1.0.101 RequestUtility.GetRequestMemoryStream() 增加对 .NET Core 3.0 AllowSynchronousIO 的设置
+
 ----------------------------------------------------------------*/
 
 using System;
@@ -70,17 +79,13 @@ using System.Text;
 using System.Threading.Tasks;
 using Senparc.CO2NET.Helpers;
 using Senparc.CO2NET.WebProxy;
-#if NET35 || NET40 || NET45
+#if NET45
 using System.Web;
 #else
 using System.Net.Http;
 using System.Net.Http.Headers;
 using Senparc.CO2NET.Extensions;
 #endif
-#if NETSTANDARD2_0
-using Microsoft.AspNetCore.Http;
-#endif
-
 
 namespace Senparc.CO2NET.HttpUtility
 {
@@ -91,7 +96,7 @@ namespace Senparc.CO2NET.HttpUtility
     {
         #region 代理
 
-#if NET35 || NET40 || NET45
+#if NET45
         private static System.Net.WebProxy _webproxy = null;
         /// <summary>
         /// 设置Web代理
@@ -149,18 +154,7 @@ namespace Senparc.CO2NET.HttpUtility
             SenparcHttpClientWebProxy = null;
         }
 
-        /// <summary>
-        /// 从 Request.Body 中读取流，并复制到一个独立的 MemoryStream 对象中
-        /// </summary>
-        /// <param name="request"></param>
-        /// <returns></returns>
-        public static Stream GetRequestMemoryStream(this HttpRequest request)
-        {
-            string body = new StreamReader(request.Body).ReadToEnd();
-            byte[] requestData = Encoding.UTF8.GetBytes(body);
-            Stream inputStream = new MemoryStream(requestData);
-            return inputStream;
-        }
+
 #endif
 
         #endregion
@@ -181,7 +175,7 @@ namespace Senparc.CO2NET.HttpUtility
             return true;
         }
 
-#if NET35 || NET40 || NET45
+#if NET45
         /// <summary>
         /// 设置HTTP头
         /// </summary>
@@ -226,14 +220,21 @@ namespace Senparc.CO2NET.HttpUtility
         /// <param name="chain"></param>
         /// <param name="sslPolicyErrors"></param>
         /// <returns></returns>
-        private static bool CheckValidationResult(HttpRequestMessage request, X509Certificate2 certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
+        public static bool CheckValidationResult(HttpRequestMessage request, X509Certificate2 certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
         {
-            return true;
+            if (sslPolicyErrors == SslPolicyErrors.None)
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
         }
 
         private static StreamContent CreateFileContent(Stream stream, string formName, string fileName, string contentType = "application/octet-stream")
         {
-            fileName = fileName.UrlEncode();
+            //fileName = fileName.UrlEncode();
             var fileContent = new StreamContent(stream);
             //上传格式参考：
             //https://mp.weixin.qq.com/wiki?t=resource/res_main&id=mp1444738729
@@ -280,7 +281,6 @@ namespace Senparc.CO2NET.HttpUtility
 
             //httpClient.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36"));
 
-            client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36");
             client.DefaultRequestHeaders.Add("Timeout", timeOut.ToString());
             client.DefaultRequestHeaders.Add("KeepAlive", "true");
 
@@ -294,12 +294,22 @@ namespace Senparc.CO2NET.HttpUtility
                 client.DefaultRequestHeaders.Add("X-Requested-With", "XMLHttpRequest");
             }
 
+            var userAgentSetted = false;//是否已经自定义User-Agent
             if (headerAddition != null)
             {
                 foreach (var item in headerAddition)
                 {
                     client.DefaultRequestHeaders.Add(item.Key, item.Value);
+                    if (item.Key.ToUpper() == "USER-AGENT")
+                    {
+                        userAgentSetted = true;
+                    }
                 }
+            }
+
+            if (!userAgentSetted)
+            {
+                client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36");
             }
         }
 
@@ -336,7 +346,7 @@ namespace Senparc.CO2NET.HttpUtility
         {
             string dataString = GetQueryString(formData);
             var formDataBytes = formData == null ? new byte[0] : Encoding.UTF8.GetBytes(dataString);
-            await stream.WriteAsync(formDataBytes, 0, formDataBytes.Length);
+            await stream.WriteAsync(formDataBytes, 0, formDataBytes.Length).ConfigureAwait(false);
             stream.Seek(0, SeekOrigin.Begin);//设置指针读取位置
         }
 

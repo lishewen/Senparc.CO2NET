@@ -19,7 +19,7 @@ Detail: https://github.com/JeffreySu/WeiXinMPSDK/blob/master/license.md
 #endregion Apache License Version 2.0
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Senparc.CO2NET.HttpUtility;
+using Senparc.CO2NET.AspNet.HttpUtility;
 using Senparc.CO2NET.Tests;
 using System;
 using System.Collections.Generic;
@@ -56,8 +56,32 @@ namespace Senparc.CO2NET.HttpUtility.Tests
 
             var cookieContainer = new CookieContainer();
             var url = "https://localhost:44335/ForTest/PostTest";//使用.NET 4.5的Sample
-            var result = RequestUtility.HttpPost(url,
+            var result = RequestUtility.HttpPost(BaseTest.serviceProvider, url,
                 cookieContainer, stream, useAjax: true);
+
+            Console.WriteLine(result);
+
+            Assert.IsNotNull(result);
+        }
+
+        /// <summary>
+        /// 测试微信特殊接口，正常请求后返回空值的情况
+        /// 测试结果：实际收到了503的响应，但是PostMan是可用的。
+        /// </summary>
+        [TestMethod]
+        public void PostJsonDataTest()
+        {
+            var data = @"{""name"":""hardenzhang"",""longitude"":""113.323753357"",""latitude"":""23.0974903107"",""province"":""广东省"",""city"":""广州市"",""district"":""海珠区"",""address"":""TTT"",""category"":""美食: 中餐厅"",""telephone"":""12345678901"",""photo"":""http://mmbiz.qpic.cn/mmbiz_png/tW66AWE2K6ECFPcyAcIZTG8RlcR0sAqBibOm8gao5xOoLfIic9ZJ6MADAktGPxZI7MZLcadZUT36b14NJ2cHRHA/0?wx_fmt=png"",""license"":""http://mmbiz.qpic.cn/mmbiz_png/tW66AWE2K6ECFPcyAcIZTG8RlcR0sAqBibOm8gao5xOoLfIic9ZJ6MADAktGPxZI7MZLcadZUT36b14NJ2cHRHA/0?wx_fmt=png"",""introduct"":""test"",""districtid"":""440105""}";
+            Stream stream = new MemoryStream();
+            var bytes = Encoding.UTF8.GetBytes(data);
+            stream.Write(bytes, 0, bytes.Length);
+            stream.Seek(0, SeekOrigin.Begin);
+
+            var cookieContainer = new CookieContainer();
+            var accesstoken = "34_WeSuCDgRVtJ0KfPlS0fNdMtBZ4XQDes54MIHt4HlaFkpkItYpLfr0OlfLsntE73eWK_jVifGWxoV2zygK4J2tE6U4eDnNUeLupAkSqf83WMh-6QgNPK9_f6r8xiMlNzVald2l1sKyaQcDPHgSXPlCGAZEW";
+            var url = "https://api.weixin.qq.com/wxa/create_map_poi?access_token="+ accesstoken;
+            var result = RequestUtility.HttpPost(BaseTest.serviceProvider, url,
+                cookieContainer, stream, useAjax: false);
 
             Console.WriteLine(result);
 
@@ -76,7 +100,7 @@ namespace Senparc.CO2NET.HttpUtility.Tests
 
             var cookieContainer = new CookieContainer();
             var url = "https://localhost:44335/ForTest/PostTest";//使用.NET 4.5的Sample
-            var result = RequestUtility.HttpResponsePost(url,
+            var result = RequestUtility.HttpResponsePost(BaseTest.serviceProvider, url,
                 cookieContainer, stream, useAjax: true);
 
             Assert.IsNotNull(result);
@@ -104,7 +128,7 @@ namespace Senparc.CO2NET.HttpUtility.Tests
                 stream.Seek(0, SeekOrigin.Begin);
 
                 var url = "https://localhost:44335/ForTest/PostTest";//使用.NET 4.5的Sample
-                var result = RequestUtility.HttpResponsePost(url,cookieContainer, stream, useAjax: true);
+                var result = RequestUtility.HttpResponsePost(BaseTest.serviceProvider, url,cookieContainer, stream, useAjax: true);
 
                 Assert.IsNotNull(result);
                 var resultString = result.Result.Content.ReadAsStringAsync().GetAwaiter().GetResult();

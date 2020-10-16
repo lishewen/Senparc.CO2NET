@@ -1,5 +1,5 @@
 ﻿/*----------------------------------------------------------------
-    Copyright (C) 2018 Senparc
+    Copyright (C) 2020 Senparc
 
     文件名：BaseRedisObjectCacheStrategy.cs
     文件功能描述：所有Redis基础缓存策略的基类
@@ -140,7 +140,7 @@ namespace Senparc.CO2NET.Cache.Redis
 
         public override async Task<ICacheLock> BeginCacheLockAsync(string resourceName, string key, int retryCount = 0, TimeSpan retryDelay = new TimeSpan())
         {
-            return await RedisCacheLock.CreateAndLockAsync(this, resourceName, key, retryCount, retryDelay);
+            return await RedisCacheLock.CreateAndLockAsync(this, resourceName, key, retryCount, retryDelay).ConfigureAwait(false);
         }
 
     }
