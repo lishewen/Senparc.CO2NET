@@ -19,7 +19,7 @@ Detail: https://github.com/Senparc/Senparc.CO2NET/blob/master/LICENSE
 #endregion Apache License Version 2.0
 
 /*----------------------------------------------------------------
-    Copyright (C) 2019 Senparc
+    Copyright (C) 2020 Senparc
 
     文件名：Get.cs
     文件功能描述：Get
@@ -52,6 +52,9 @@ Detail: https://github.com/Senparc/Senparc.CO2NET/blob/master/LICENSE
     修改标识：Senparc - 20190429
     修改描述：v0.7.0 优化 HttpClient，重构 RequestUtility（包括 Post 和 Get），引入 HttpClientFactory 机制
 
+    修改标识：Senparc - 20200925
+    修改描述：v1.3.201 更新 Senparc.CO2NET.HttpUtility.Get.Download() 方法，修正 filename 判断正则表达式
+
 ----------------------------------------------------------------*/
 
 
@@ -59,14 +62,14 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
-#if !NET35 && !NET40
 using System.Net.Http;
 using System.Threading.Tasks;
-#endif
 using System.Text;
 using Senparc.CO2NET.Helpers;
-#if NET35 || NET40 || NET45
+#if NET45
 using System.Web.Script.Serialization;
+#else
+using Microsoft.Extensions.DependencyInjection;
 #endif
 
 
@@ -91,19 +94,24 @@ namespace Senparc.CO2NET.HttpUtility
         }
 
 
-#region 同步方法
+        #region 同步方法
 
         /// <summary>
         /// GET方式请求URL，并返回T类型
         /// </summary>
         /// <typeparam name="T">接收JSON的数据类型</typeparam>
+        /// <param name="serviceProvider">.NetCore 下的服务器提供程序，如果 .NET Framework 则保留 null</param>
         /// <param name="url"></param>
         /// <param name="encoding"></param>
         /// <param name="afterReturnText">返回JSON本文，并在进行序列化之前触发，参数分别为：url、returnText</param>
         /// <returns></returns>
-        public static T GetJson<T>(string url, Encoding encoding = null, Action<string, string> afterReturnText = null)
+        public static T GetJson<T>(
+            IServiceProvider serviceProvider,
+            string url, Encoding encoding = null, Action<string, string> afterReturnText = null)
         {
-            string returnText = RequestUtility.HttpGet(url, encoding);
+            string returnText = RequestUtility.HttpGet(
+                 serviceProvider,
+                 url, encoding);
 
             afterReturnText?.Invoke(url, returnText);
 
@@ -115,11 +123,14 @@ namespace Senparc.CO2NET.HttpUtility
         /// <summary>
         /// 从Url下载
         /// </summary>
+        /// <param name="serviceProvider">.NetCore 下的服务器提供程序，如果 .NET Framework 则保留 null</param>
         /// <param name="url"></param>
         /// <param name="stream"></param>
-        public static void Download(string url, Stream stream)
+        public static void Download(
+            IServiceProvider serviceProvider,
+            string url, Stream stream)
         {
-#if NET35 || NET40 || NET45
+#if NET45
             //ServicePointManager.SecurityProtocol = SecurityProtocolType.Ssl3
             //ServicePointManager.ServerCertificateValidationCallback = new RemoteCertificateValidationCallback(CheckValidationResult);
 
@@ -131,7 +142,7 @@ namespace Senparc.CO2NET.HttpUtility
             //    stream.WriteByte(b);
             //}
 #else
-            HttpClient httpClient = SenparcDI.GetRequiredService<SenparcHttpClient>().Client;
+            HttpClient httpClient = serviceProvider.GetRequiredService<SenparcHttpClient>().Client;
             var t = httpClient.GetByteArrayAsync(url);
             t.Wait();
             var data = t.Result;
@@ -143,16 +154,17 @@ namespace Senparc.CO2NET.HttpUtility
         /// <summary>
         /// 从Url下载，并保存到指定目录
         /// </summary>
+        /// <param name="serviceProvider">.NetCore 下的服务器提供程序，如果 .NET Framework 则保留 null</param>
         /// <param name="url">需要下载文件的Url</param>
         /// <param name="filePathName">保存文件的路径，如果下载文件包含文件名，按照文件名储存，否则将分配Ticks随机文件名</param>
         /// <param name="timeOut">超时时间</param>
         /// <returns></returns>
-        public static string Download(string url, string filePathName, int timeOut = 999)
+        public static string Download(IServiceProvider serviceProvider, string url, string filePathName, int timeOut = 999)
         {
             var dir = Path.GetDirectoryName(filePathName) ?? "/";
             Directory.CreateDirectory(dir);
 
-#if NET35 || NET40 || NET45
+#if NET45
 
             HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
             request.Method = "GET";
@@ -163,10 +175,12 @@ namespace Senparc.CO2NET.HttpUtility
             using (Stream responseStream = response.GetResponseStream())
             {
                 string responseFileName = null;
+                //如：content-disposition: inline; filename="WeChatSampleBuilder-2.0.0.zip"; filename*=utf-8''WeChatSampleBuilder-2.0.0.zip
                 var contentDescriptionHeader = response.GetResponseHeader("Content-Disposition");
+
                 if (!string.IsNullOrEmpty(contentDescriptionHeader))
                 {
-                    var fileName = Regex.Match(contentDescriptionHeader, @"(?<=filename="")([\s\S]+)(?= "")", RegexOptions.IgnoreCase).Value;
+                    var fileName = Regex.Match(contentDescriptionHeader, @"(?<=filename="")([\s\S]+)(?="")", RegexOptions.IgnoreCase).Value;
 
                     responseFileName = Path.Combine(dir, fileName);
                 }
@@ -190,7 +204,7 @@ namespace Senparc.CO2NET.HttpUtility
             }
 
 #else
-            System.Net.Http.HttpClient httpClient = SenparcDI.GetRequiredService<SenparcHttpClient>().Client;
+            System.Net.Http.HttpClient httpClient = serviceProvider.GetRequiredService<SenparcHttpClient>().Client;
             using (var responseMessage = httpClient.GetAsync(url).Result)
             {
                 if (responseMessage.StatusCode == HttpStatusCode.OK)
@@ -232,15 +246,20 @@ namespace Senparc.CO2NET.HttpUtility
         /// <summary>
         /// 【异步方法】异步GetJson
         /// </summary>
+        /// <param name="serviceProvider">.NetCore 下的服务器提供程序，如果 .NET Framework 则保留 null</param>
         /// <param name="url"></param>
         /// <param name="encoding"></param>
         /// <param name="afterReturnText">返回JSON本文，并在进行序列化之前触发，参数分别为：url、returnText</param>
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
         /// <exception cref="ErrorJsonResultException"></exception>
-        public static async Task<T> GetJsonAsync<T>(string url, Encoding encoding = null, Action<string, string> afterReturnText = null)
+        public static async Task<T> GetJsonAsync<T>(
+            IServiceProvider serviceProvider,
+            string url, Encoding encoding = null, Action<string, string> afterReturnText = null)
         {
-            string returnText = await RequestUtility.HttpGetAsync(url, encoding).ConfigureAwait(false);
+            string returnText = await RequestUtility.HttpGetAsync(
+                 serviceProvider,
+                 url, encoding).ConfigureAwait(false);
 
             afterReturnText?.Invoke(url, returnText);
 
@@ -252,12 +271,15 @@ namespace Senparc.CO2NET.HttpUtility
         /// <summary>
         /// 【异步方法】异步从Url下载
         /// </summary>
+        /// <param name="serviceProvider">.NetCore 下的服务器提供程序，如果 .NET Framework 则保留 null</param>
         /// <param name="url"></param>
         /// <param name="stream"></param>
         /// <returns></returns>
-        public static async Task DownloadAsync(string url, Stream stream)
+        public static async Task DownloadAsync(
+            IServiceProvider serviceProvider,
+            string url, Stream stream)
         {
-#if NET35 || NET40 || NET45
+#if NET45
             //ServicePointManager.SecurityProtocol = SecurityProtocolType.Ssl3
             //ServicePointManager.ServerCertificateValidationCallback = new RemoteCertificateValidationCallback(CheckValidationResult);
 
@@ -269,7 +291,7 @@ namespace Senparc.CO2NET.HttpUtility
             //    stream.WriteAsync(b);
             //}
 #else
-            HttpClient httpClient = SenparcDI.GetRequiredService<SenparcHttpClient>().Client;
+            HttpClient httpClient = serviceProvider.GetRequiredService<SenparcHttpClient>().Client;
             var data = await httpClient.GetByteArrayAsync(url).ConfigureAwait(false);
             await stream.WriteAsync(data, 0, data.Length).ConfigureAwait(false);
 #endif
@@ -279,11 +301,14 @@ namespace Senparc.CO2NET.HttpUtility
         /// <summary>
         /// 【异步方法】从Url下载，并保存到指定目录
         /// </summary>
+        /// <param name="serviceProvider">.NetCore 下的服务器提供程序，如果 .NET Framework 则保留 null</param>
         /// <param name="url">需要下载文件的Url</param>
         /// <param name="filePathName">保存文件的路径，如果下载文件包含文件名，按照文件名储存，否则将分配Ticks随机文件名</param>
         /// <param name="timeOut">超时时间</param>
         /// <returns></returns>
-        public static async Task<string> DownloadAsync(string url, string filePathName, int timeOut = Config.TIME_OUT)
+        public static async Task<string> DownloadAsync(
+            IServiceProvider serviceProvider,
+            string url, string filePathName, int timeOut = Config.TIME_OUT)
         {
             var dir = Path.GetDirectoryName(filePathName) ?? "/";
             Directory.CreateDirectory(dir);
@@ -291,7 +316,7 @@ namespace Senparc.CO2NET.HttpUtility
 #if NET45
             System.Net.Http.HttpClient httpClient = new HttpClient();
 #else
-            System.Net.Http.HttpClient httpClient = SenparcDI.GetRequiredService<SenparcHttpClient>().Client;
+            System.Net.Http.HttpClient httpClient = serviceProvider.GetRequiredService<SenparcHttpClient>().Client;
 #endif
             httpClient.Timeout = TimeSpan.FromMilliseconds(timeOut);
             using (var responseMessage = await httpClient.GetAsync(url).ConfigureAwait(false))

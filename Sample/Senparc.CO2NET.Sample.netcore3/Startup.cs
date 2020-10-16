@@ -14,6 +14,7 @@ using Microsoft.Extensions.Options;
 using Senparc.CO2NET.Cache;
 using Senparc.CO2NET.Cache.Memcached;
 using Senparc.CO2NET.RegisterServices;
+using Senparc.CO2NET.AspNet;
 
 namespace Senparc.CO2NET.Sample.netcore3
 {
@@ -33,7 +34,6 @@ namespace Senparc.CO2NET.Sample.netcore3
 
             services.AddMemoryCache();//使用本地缓需要添加
             services.Add(ServiceDescriptor.Singleton(typeof(ILogger<>), typeof(Logger<>)));//使用 Memcached 或 Logger 需要添加
-
 
             //Senparc.CO2NET 全局注册（必须）
             services.AddSenparcGlobalServices(Configuration);
@@ -75,7 +75,7 @@ namespace Senparc.CO2NET.Sample.netcore3
                     #region 全局缓存配置（按需）
 
                     //当同一个分布式缓存同时服务于多个网站（应用程序池）时，可以使用命名空间将其隔离（非必须）
-                    register.ChangeDefaultCacheNamespace("CO2NETCache.netcore-3.0");
+                    register.ChangeDefaultCacheNamespace("CO2NETCache.netcore-3.1");
 
                     #region 配置和使用 Redis
 
@@ -88,11 +88,11 @@ namespace Senparc.CO2NET.Sample.netcore3
                          * 1、Redis 的连接字符串信息会从 Config.SenparcSetting.Cache_Redis_Configuration 自动获取并注册，如不需要修改，下方方法可以忽略
                         /* 2、如需手动修改，可以通过下方 SetConfigurationOption 方法手动设置 Redis 链接信息（仅修改配置，不立即启用）
                          */
-                        Senparc.CO2NET.Cache.Redis.Register.SetConfigurationOption(redisConfigurationStr);
+                        Senparc.CO2NET.Cache.CsRedis.Register.SetConfigurationOption(redisConfigurationStr);
 
                         //以下会立即将全局缓存设置为 Redis
-                        Senparc.CO2NET.Cache.Redis.Register.UseKeyValueRedisNow();//键值对缓存策略（推荐）
-                                                                                  //Senparc.CO2NET.Cache.Redis.Register.UseHashRedisNow();//HashSet储存格式的缓存策略
+                        Senparc.CO2NET.Cache.CsRedis.Register.UseKeyValueRedisNow();//键值对缓存策略（推荐）
+                        //Senparc.CO2NET.Cache.Redis.Register.UseHashRedisNow();//HashSet储存格式的缓存策略
 
                         //也可以通过以下方式自定义当前需要启用的缓存策略
                         //CacheStrategyFactory.RegisterObjectCacheStrategy(() => RedisObjectCacheStrategy.Instance);//键值对
@@ -138,14 +138,14 @@ namespace Senparc.CO2NET.Sample.netcore3
                     #endregion
                 },
 
-                #region 扫描自定义扩展缓存
+            #region 扫描自定义扩展缓存
 
                 //自动扫描自定义扩展缓存（二选一）
                 autoScanExtensionCacheStrategies: true //默认为 true，可以不传入
-                //指定自定义扩展缓存（二选一）
-                //autoScanExtensionCacheStrategies: false, extensionCacheStrategiesFunc: () => GetExCacheStrategies(senparcSetting.Value)
+                                                       //指定自定义扩展缓存（二选一）
+                                                       //autoScanExtensionCacheStrategies: false, extensionCacheStrategiesFunc: () => GetExCacheStrategies(senparcSetting.Value)
 
-                #endregion
+            #endregion
             );
         }
 

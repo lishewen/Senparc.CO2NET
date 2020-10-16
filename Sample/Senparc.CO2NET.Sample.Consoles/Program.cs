@@ -19,7 +19,7 @@ Detail: https://github.com/Senparc/Senparc.CO2NET/blob/master/LICENSE
 #endregion Apache License Version 2.0
 
 /*----------------------------------------------------------------
-    Copyright (C) 2019 Senparc
+    Copyright (C) 2020 Senparc
 
     文件名：Program.cs
     文件功能描述：Console 示例（同样适用于 WinForm 和 WPF）
@@ -52,7 +52,7 @@ namespace Senparc.CO2NET.Sample.Consoles
 
             var config = configBuilder.Build();
             Console.WriteLine("完成 ServiceCollection 和 ConfigurationBuilder 初始化");
-            
+
             //更多绑定操作参见：https://docs.microsoft.com/en-us/aspnet/core/fundamentals/configuration/?view=aspnetcore-2.2
             var senparcSetting = new SenparcSetting();
             config.GetSection("SenparcSetting").Bind(senparcSetting);

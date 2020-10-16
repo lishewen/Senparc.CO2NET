@@ -19,7 +19,7 @@ Detail: https://github.com/Senparc/Senparc.CO2NET/blob/master/LICENSE
 #endregion Apache License Version 2.0
 
 /*----------------------------------------------------------------
-    Copyright (C) 2019 Senparc
+    Copyright (C) 2020 Senparc
     
     文件名：FileHelper.cs
     文件功能描述：处理文件
@@ -45,10 +45,14 @@ Detail: https://github.com/Senparc/Senparc.CO2NET/blob/master/LICENSE
     修改标识：Senparc - 20190811
     修改描述：v0.8.6 添加 FileHelper.FileInUse() 方法，用于判断文件是否正在被占用
 
+    修改标识：Senparc - 20200530
+    修改描述：v1.3.110 添加 FileHelper.TryCreateDirectory() 方法
+
 ----------------------------------------------------------------*/
 
 
 
+using System;
 using System.IO;
 
 namespace Senparc.CO2NET.Helpers
@@ -78,11 +82,13 @@ namespace Senparc.CO2NET.Helpers
         /// </summary>
         /// <param name="url"></param>
         /// <param name="fullFilePathAndName"></param>
-        public static void DownLoadFileFromUrl(string url, string fullFilePathAndName)
+        public static void DownLoadFileFromUrl(IServiceProvider serviceProvider,string url, string fullFilePathAndName)
         {
             using (FileStream fs = new FileStream(fullFilePathAndName, FileMode.OpenOrCreate))
             {
-                HttpUtility.Get.Download(url, fs);
+                HttpUtility.Get.Download(
+                    serviceProvider,
+                    url, fs);
 #if NET35
                 fs.Flush();
 #else
@@ -113,6 +119,18 @@ namespace Senparc.CO2NET.Helpers
             catch
             {
                 return true;
+            }
+        }
+
+        /// <summary>
+        /// 如果目录不存在，则创建目录
+        /// </summary>
+        /// <param name="dir">目录绝对路径</param>
+        public static void TryCreateDirectory(string dir)
+        {
+            if (!Directory.Exists(dir))
+            {
+                Directory.CreateDirectory(dir);
             }
         }
     }
